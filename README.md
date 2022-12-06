@@ -5,7 +5,7 @@ It is made to motivate user to work by joking ang monitoring their progress.
 
 ## Features
 
-- Shows number of lines and todoes in an active text editor by command.
+- Shows number of lines and todoes in an active text editor while it updated (saved).
 
 ## Extension Settings
 

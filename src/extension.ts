@@ -1,8 +1,11 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import {getNumberOfLines} from './getNumberOfLines';
 
 let progressStatusBarItem: vscode.StatusBarItem;
+
+let docsStatuses: {"name":string, "lines":number}[];
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -15,25 +18,32 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('someext.DoSmth', () => {
+	let doSmthCommand = vscode.commands.registerCommand('someext.DoSmth', () => {
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
 		vscode.window.showInformationMessage('I work!');
 	});
-	context.subscriptions.push(disposable);
 
-	progressStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	context.subscriptions.push(doSmthCommand);
+
+	progressStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 200);
+	progressStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
 	progressStatusBarItem.command = 'someext.DoSmth';
 	context.subscriptions.push(progressStatusBarItem);
+	
+	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(updateStatusBar));
+	context.subscriptions.push(vscode.workspace.onDidDeleteFiles(updateLines));
+	context.subscriptions.push(vscode.workspace.onDidDeleteFiles(updateStatusBar));
 
-	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateStatusBar));
-
+	updateLines();
 	updateStatusBar();
 }
 
 // this method is called when your extension is deactivated
 export function deactivate(context: vscode.ExtensionContext) {
 	let close = vscode.commands.registerCommand('someext.CloseIt', () => {
+
+		vscode.workspace.saveAll()
 		vscode.window.showInformationMessage('I closes(');
 		progressStatusBarItem.hide();
 	});
@@ -41,53 +51,51 @@ export function deactivate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(close);
 }
 
-function updateStatusBar() : void {
-	const n = getNumberOfLines(vscode.window.activeTextEditor);
-	const todoes = getTODOes(vscode.window.activeTextEditor);
+function createStatusBarItemMessageLines(lines: number): string {
+	let message = "";
+	if (lines < 0) {
+		vscode.window.showInformationMessage('Looks like you are on regression or some refactoring..');
+	}
+	message = `New lines: ${lines}`;
+	return message;
+}
+function updateLines() : void {
+	let docs = vscode.workspace.textDocuments;
+	docsStatuses = []
+	docs.forEach((doc) => {
+		let name = doc.fileName
+		let lines = getNumberOfLines(doc.getText());
+		docsStatuses.push({"name": name, "lines": lines});
 
-	if (n > 0) {
-		progressStatusBarItem.text = `Here is lines = ${n}`;
-		progressStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+		console.log(`name: ${name}, lines: ${lines}`);
+	})
+}
+
+function updateStatusBar() : void {
+	let docs = vscode.workspace.textDocuments;
+	let newLines = 0
+	docs.forEach((doc) => {
+		let name = doc.fileName
+		let lines = getNumberOfLines(doc.getText());
+		let ind = docsStatuses.findIndex(i => i.name == name);
+		if (docsStatuses[ind]?.lines != lines) {
+			let l = docsStatuses[ind]?.lines
+			newLines += lines - (l !=undefined? l: 0);
+			console.log(`in doc ${name} with l ${l} added ${newLines} lines`);
+			if (l) {
+				docsStatuses[ind].lines = lines;
+			}
+		}
+	});
+
+	if (newLines != 0) {
+		let textLines = createStatusBarItemMessageLines(newLines);
+		progressStatusBarItem.text = textLines;
 		progressStatusBarItem.show();
 		console.log("show status bar");
 	}
 	else {
-		progressStatusBarItem.hide();
-		console.log("hide status bar");
+		progressStatusBarItem.text = `No lines`;
+		progressStatusBarItem.show();
 	}
-
-	if (todoes.length > 0) {
-		vscode.window.showInformationMessage(`You have todes at:\n ${todoes} lines`);
-		console.log("show status bar");
-	}
-}
-function getNumberOfLines(editor : vscode.TextEditor | undefined) : number {
-	const text = editor?.document.getText();
-
-	var textLines = text?.split('\n')
-	let lines = 0
-	textLines?.forEach((value:string) => {
-		let match = value.match('.+')?.length;
-		lines += match == undefined? 0: match;
-		console.log(`match is ${match}`);
-	});
-	console.log(`get number of lines ${lines}`);
-
-	return lines == undefined? 0:lines;
-}
-
-function getTODOes(editor : vscode.TextEditor | undefined): Array<string> | Array<undefined> {
-	let array:Array<string> = [];
-	const text = editor?.document.getText();
-	var textLines = text?.split('\n')
-
-	let ind = 1
-	textLines?.forEach((value:string) => {
-		let includes = value.toLocaleLowerCase().replace(' ','').includes('todo');
-		if (includes) {
-			array.push(ind.toString());
-		}
-		ind += 1;
-	});
-	return array;
 }
