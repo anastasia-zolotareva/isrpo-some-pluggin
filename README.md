@@ -39,6 +39,10 @@ Nothing to fix - just to update.
 
 Basic functionality added: shows number of lines and todos.
 
+### 1.1.1
+
+It shows information about number of lines per set time.
+
 ## Following extension guidelines
 
 Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
