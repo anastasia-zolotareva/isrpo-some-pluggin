@@ -5,7 +5,8 @@ It is made to motivate user to work by joking ang monitoring their progress.
 
 ## Features
 
-- Shows number of lines and todoes in an active text editor while it updated (saved).
+- Shows number of lines in an active directory per each set minutes.
+- Shows message if there are some lines removed.
 
 ## Extension Settings
 
@@ -20,7 +21,7 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-Does not update when on change. Just show current results.
+Looks like it should make full progress file
 
 ## Release Notes
 
